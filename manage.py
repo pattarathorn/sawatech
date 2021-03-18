@@ -16,7 +16,9 @@ def index():
 
 
     return 'Hello World!'
-
+@app.route('/GPS', methods=['GET', 'POST'])
+def checkgps(**kwargs):
+    return line_bot_api.reply_message(kwargs['replyToken'], TextSendMessage( text = 'แมวอยู่ไหนน้าาาาา' ))
 
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
@@ -36,14 +38,22 @@ def webhook():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
 
-    text=event.message.text
+    text = event.message.text
+    
+    replyToken = event.reply_token
     #line_bot_api.reply_message(event.reply_token,TextSendMessage(text=event.message.text))
     if (text == 'โอมชอบใคร' or text == 'โอม' or text == 'แย้'):
-        return line_bot_api.reply_message(event.reply_token,TextSendMessage(text='ชอบเป้'))
+        return line_bot_api.reply_message(replyToken,TextSendMessage(text='ชอบเป้'))
     if (text == 'เป้' or text == 'เนม'):
-        return line_bot_api.reply_message(event.reply_token,TextSendMessage(text='ไม่ชอบโอมหรอก แบร่ๆ'))
+            return line_bot_api.reply_message(replyToken,TextSendMessage(text='ไม่ชอบโอมหรอก แบร่ๆ'))
+        
+
+    # Rich Menu Switcher
+    if(text == 'Check GPS'):
+        return checkgps(replyToken=replyToken)
+
     else:
-        return line_bot_api.reply_message(event.reply_token,TextSendMessage(text=event.message.text))
+            return line_bot_api.reply_message(replyToken,TextSendMessage(text=event.message.text))
 
 if __name__ == '__main__':
     app.run(debug=True)
