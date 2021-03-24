@@ -18,7 +18,11 @@ def index():
     return 'Hello World!'
 @app.route('/GPS', methods=['GET', 'POST'])
 def checkgps(**kwargs):
-    return line_bot_api.reply_message(kwargs['replyToken'], TextSendMessage( text = 'แมวอยู่ไหนน้าาาาา' ))
+    return line_bot_api.reply_message(kwargs['replyToken'], TextSendMessage( text = 'แมวอยู่ @Address นี่ครับ' ))
+
+@app.route('/Temperature', methods=['GET', 'POST'])
+def Temp(**kwargs):
+    return line_bot_api.reply_message(kwargs['replyToken'], TextSendMessage( text = 'อุณหภูมิ @temp องศา' ))
 
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
@@ -42,18 +46,15 @@ def handle_message(event):
     
     replyToken = event.reply_token
     #line_bot_api.reply_message(event.reply_token,TextSendMessage(text=event.message.text))
-    if (text == 'โอมชอบใคร' or text == 'โอม' or text == 'แย้'):
-        return line_bot_api.reply_message(replyToken,TextSendMessage(text='ชอบเป้'))
-    if (text == 'เป้' or text == 'เนม'):
-            return line_bot_api.reply_message(replyToken,TextSendMessage(text='ไม่ชอบโอมหรอก แบร่ๆ'))
-        
-
-    # Rich Menu Switcher
-    if(text == 'Check GPS'):
+# Rich Menu Switcher
+    if(text == 'register'):
+        return line_bot_api.reply_message(replyToken,TextSendMessage(text='กรุณากรอกชื่อแมว'))
+    if(text == 'check gps'):
         return checkgps(replyToken=replyToken)
-
+    if(text == 'check temperature'):
+        return Temp(replyToken=replyToken)
     else:
-            return line_bot_api.reply_message(replyToken,TextSendMessage(text=event.message.text))
+        return line_bot_api.reply_message(replyToken,TextSendMessage(text='ลองคำสั่งอื่น'))
 
 if __name__ == '__main__':
     app.run(debug=True)
