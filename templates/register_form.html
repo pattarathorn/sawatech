@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <form  
+        method="POST"
+        action="/create_userdata"
+    >
+        <label for="userID">UserID:</label><br>
+        <input type="text" id="userID" name="userID" value={{userID}} readonly><br>
+        <label for="serialID">Serial No.</label><br>
+        <input type="text" id="serialID" name="serialID" required><br>
+        <label for="name">Your Name</label><br>
+        <input type="text" id="name" name="name" required><br>
+        <label for="petName">Pet Name:</label><br>
+        <input type="text" id="petName" name="petName" required><br>
+        <label for='tel'>Tel.</label><br>
+        <input type="text" id="tel" name="tel" required><br><br>
+        <input type="submit">
+    </form>
+</body>
+<script>
+    
+</script>
+</html>
