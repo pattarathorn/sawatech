@@ -13,14 +13,14 @@
     >
         <label for="userID">UserID:</label><br>
         <input type="text" id="userID" name="userID" value="{{userID}}" readonly><br>
-        <label for="serialID">Serial No:</label><br>
+        <label for="serialID">Serial ID:</label><br>
         <input type="text" id="serialID" name="serialID" required><br>
         <label for="name">Your Name:</label><br>
         <input type="text" id="name" name="name" required><br>
         <label for="petName">Pet Name:</label><br>
         <input type="text" id="petName" name="petName" required><br>
         <label for='tel'>Tel:</label><br>
-        <input type="text" id="tel" name="tel" required><br>
+        <input type="text" id="tel" name="tel" minlength="10" maxlength="10"required><br>
         <br>
         <input type="submit">
     </form>

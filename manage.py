@@ -43,6 +43,51 @@ collection_test = mongo.db.test
 collection_userData = mongo.db.user_data
 collection_petStatus = mongo.db.pet_status
 
+# ----------------- set Hardware --------------------------
+# @app.route('/set_serialID', methods=['POST'])
+# def set_serialID():
+#     data = request.json
+#     userData = {
+#         "userID":"",
+#         "serialID": data["serialID"],
+#         "name":"",
+#         "petName":"",
+#         "tel":""
+#     }
+#     petStatus = {
+#         "serialID": data["serialID"],
+#         "petName":"",
+#         "temp": '0',
+#         "humid": '0',
+#         "lat": '0',
+#         "long": '0'
+#     }
+#     collection_userData.insert_one(userData)
+#     collection_petStatus.insert_one(petStatus)
+#     return 'Setup Success!'
+
+# ------------------ register --------------------
+# @app.route('/create_user', methods=['PATCH'])
+# def register():
+#     data = request.form
+#     serialID = {"serialID":data["serialID"]}
+#     userData = {
+#         "$set:":{
+#             "userID": data["userID"],
+#             "name":data["name"],
+#             "petName": data["petName"],
+#             "tel": data["tel"]
+#         }
+#     }
+#     petStatus = {
+#         "$set":{
+#             "petName":data["petName"],
+#         }
+#     }
+#     collection_userData.update_one(serialID,userData)
+#     collection_petStatus.update_one(serialID,petStatus)
+#     return 'Created Successfully'
+
 @app.route('/')
 def index():
     return 'Sawa Embedded'
@@ -71,7 +116,7 @@ def register():
     }
     collection_userData.insert_one(userData)
     collection_petStatus.insert_one(petStatus)
-    return {'result': 'Created successfully'}
+    return 'Created Successfully'
 
 @app.route('/userdata/userID/<userID>', methods=['GET'])
 def get_userdata_by_userID(userID):
@@ -102,9 +147,9 @@ def get_userdata_by_serialID(serialID):
     return userData
 
 @app.route('/petStatus/<serialID>', methods=['PATCH'])
-def update_petStatus(serialID):
+def get_petStatus_from_hardware(serialID):
     data = request.json
-    filt = {'serialID':serialID}
+    serialID = {'serialID':serialID}
     update_petStatus = {
         "$set":{
             "temp": data["temp"],
@@ -113,34 +158,18 @@ def update_petStatus(serialID):
             "long": data["long"]
         }
     }
-    collection_petStatus.update_one(filt,update_petStatus)
-    return {'result': 'Created successfully'}
-
-
+    collection_petStatus.update_one(serialID,update_petStatus)
+    return {'result': 'Updated Successfully'}
 
 @app.route('/delete_data', methods=['DELETE'])
 def delete_data(**kwargs):
     userID = {"userID": kwargs["userID"]}
     userData = collection_userData.find(userID)
     for element in userData:
-        collection_petStatus.delete_one(element["serialID"])
-    # serialID = {"serialID":petStatus[0]["serialID"]}
+        serialID = {"serialID":element["serialID"]}
+        collection_petStatus.delete_many(serialID)
     collection_userData.delete_many(userID)
     return {'result': 'Deleted successfully'}
-
-# @app.route('/userData', methods=['PATCH'])
-# def edit_userdata():
-#     data = request.json    
-#     filt = {'userID': ""}
-#     updated_content = {"$set": {'content1': data["content1"]}}  
-#     collection_userData.update_one(filt, updated_content) 
-#     return {'result': 'Updated successfully'}
-
-@app.route('/test', methods=['POST'])
-def test():
-    data = request.json
-    collection_test.insert_one(data)
-    return {'result': 'Created successfully'}
 
 @app.route('/GPS', methods=['GET', 'POST'])
 def checkinfo(**kwargs):
@@ -153,9 +182,16 @@ def checkinfo(**kwargs):
     print(type(PetInfo))
     line_bot_api.reply_message(kwargs['replyToken'], TextSendMessage(text = str(PetInfo) ))
         
+# --------------- test api ----------------
+@app.route('/test', methods=['POST'])
+def test():
+    data = request.json
+    collection_test.insert_one(data)
+    return {'result': 'Created successfully'}
 
 
 # * ------------------------------------ line api ---------------------------------- *
+
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     # get X-Line-Signature header value
@@ -197,12 +233,19 @@ def handle_message(event):
     nameCat = event.message.text
     replyToken = event.reply_token
     if text == 'เมนู':
-        return line_bot_api.reply_message(replyToken,TextSendMessage(text = 'https://breezy-skunk-90.loca.lt/register/' + event.source.user_id))
+        buttons_template = ButtonsTemplate(
+            title='Menu', text='เลือกฟังก์ชัน', actions=[
+                URITemplateAction(
+                    label='ลงทะเบียนน้องแมว', uri='https://breezy-skunk-90.loca.lt/register/' + event.source.user_id),
+                URITemplateAction(
+                    label='แก้ไขข้อมูล', uri='https://line.me')
+            ])
+        template_message = TemplateSendMessage(
+            alt_text='Buttons alt text', template=buttons_template)
+        line_bot_api.reply_message(event.reply_token, template_message)
     else:
         return checkinfo(replyToken=replyToken,userID=userID,nameCat=nameCat)
-        
-    #else:
-    #   return line_bot_api.reply_message(replyToken,TextSendMessage(text='ลองคำสั่งอื่น'))
+
 
 if __name__ == '__main__':
     app.run(port='8000',debug=True)
