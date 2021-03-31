@@ -44,7 +44,7 @@ collection_petStatus = mongo.db.pet_status
 
 @app.route('/')
 def index():
-    return 'Hello World!'
+    return 'Sawa Embedded'
 
 @app.route('/register')
 def register():
@@ -86,20 +86,19 @@ def register_user():
         "petName": data["petName"],
         "tel": data["tel"]
     }
-
     petStatus = {
         "serialID": data["serialID"],
         "petName":data["petName"],
         "temp": '0',
         "humid": '0',
-        "location": '0'
+        "lat": '0',
+        "long": '0'
     }
-
     collection_userData.update_one(userData)
     collection_petStatus.insert_one(petStatus)
     return {'result': 'Crated successfully'}
 
-@app.route('/userdata', methods=['PATCH'])
+@app.route('/userData', methods=['PATCH'])
 def edit_userdata():
     data = request.json    
     filt = {'userID': ""}
@@ -107,16 +106,16 @@ def edit_userdata():
     collection_userData.update_one(filt, updated_content) 
     return {'result': 'Updated successfully'}
 
-@app.route('/userdata', methods=['GET'])
-def get_userdata():
-    filt = {"serialID":"test1"}
-    data = collection_petStatus.find_one(filt)
+@app.route('/userdata/serialID/<serialID>', methods=['GET'])
+def get_userdata(serialID):
+    filt = {"serialID":serialID}
+    data = collection_userData.find_one(filt)
     userData = {
-        "userID": data["userID"],
+       "userID": data["userID"],
         "serialID": data["serialID"],
         "name":data["name"],
         "petName": data["petName"],
-        "tel": data["tel"]
+        "tel": data["tel"] 
     }
     return userData
 
@@ -151,7 +150,6 @@ def checkinfo(**kwargs):
     print(type(PetInfo))
     line_bot_api.reply_message(kwargs['replyToken'], TextSendMessage(text = str(PetInfo) ))
         
-
 
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
