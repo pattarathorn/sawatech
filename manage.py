@@ -26,11 +26,12 @@ from flask import (
     Markup,
     jsonify,
     abort,
-
 )
+
 from flask_pymongo import PyMongo
 import datetime
 import pytz
+
 app = Flask(__name__)
 line_bot_api = LineBotApi('MuR72Xn+KcIDblzlw8RI+v9msVbC3f+vpa7wpBjT1rpdvXtWdgz7lvs4g837yrGXsV7/RneVMolyS/tBHR6dN+rh3zGQEM6w4yYcKWzGQvAOyYFyQslivchW5cwu+H5diHT8zaiFIlEqlzMJU86uMgdB04t89/1O/w1cDnyilFU=')
 handler = WebhookHandler('df9689715ac16dd5795f9d0c4e4aba57')
@@ -46,38 +47,12 @@ collection_petStatus = mongo.db.pet_status
 def index():
     return 'Sawa Embedded'
 
-@app.route('/register')
-def register():
-    return render_template("register_form.html")
+@app.route('/register/<userID>')
+def register_page(userID):
+    return render_template("register_form.html",userID=userID)
 
 @app.route('/create_user', methods=['POST'])
-def create_user(**kwargs):
-    userData = {
-        "userID": kwargs["userID"],
-        "serialID": "0",
-        "name":"0",
-        "petName":"0",
-        "tel" : "0"
-    }
-    collection_userData.insert_one(userData)
-    return userData
-
-@app.route('/get_userid', methods=['GET'])
-def who_u_talk_to(**kwargs):
-    line_bot_api.reply_message(kwargs["replyToken"], TextSendMessage(text='https://average-wolverine-93.loca.lt/register'))
-    return {"userID":kwargs["userID"]}
-
-@app.route('/delete_user', methods=['DELETE'])
-def delete_user(**kwargs):
-    userID = {"userID": kwargs["userID"]}
-    petStatus = collection_userData.find(userID)
-    serialID = {"serialID":petStatus[0]["serialID"]}
-    collection_userData.delete_many(userID)
-    collection_petStatus.delete_many(serialID)
-    return {'result': 'Deleted successfully'}
-
-@app.route('/register_user', methods=['PATCH'])
-def register_user():
+def register():
     data = request.form
     userData = {
         "userID": data["userID"],
@@ -94,24 +69,31 @@ def register_user():
         "lat": '0',
         "long": '0'
     }
-    collection_userData.update_one(userData)
+    collection_userData.insert_one(userData)
     collection_petStatus.insert_one(petStatus)
-    return {'result': 'Crated successfully'}
+    return {'result': 'Created successfully'}
 
-@app.route('/userData', methods=['PATCH'])
-def edit_userdata():
-    data = request.json    
-    filt = {'userID': ""}
-    updated_content = {"$set": {'content1': data["content1"]}}  
-    collection_userData.update_one(filt, updated_content) 
-    return {'result': 'Updated successfully'}
+@app.route('/userdata/userID/<userID>', methods=['GET'])
+def get_userdata_by_userID(userID):
+    filt = {"userID":userID}
+    data = collection_userData.find(filt)
+    userData = []
+    for element in data:
+        userData.append({
+            "userID": element["userID"],
+            "serialID": element["serialID"],
+            "name":element["name"],
+            "petName": element["petName"],
+            "tel": element["tel"]
+        })
+    return {"userData":userData}
 
 @app.route('/userdata/serialID/<serialID>', methods=['GET'])
-def get_userdata(serialID):
+def get_userdata_by_serialID(serialID):
     filt = {"serialID":serialID}
     data = collection_userData.find_one(filt)
     userData = {
-       "userID": data["userID"],
+        "userID": data["userID"],
         "serialID": data["serialID"],
         "name":data["name"],
         "petName": data["petName"],
@@ -119,25 +101,46 @@ def get_userdata(serialID):
     }
     return userData
 
+@app.route('/petStatus/<serialID>', methods=['PATCH'])
+def update_petStatus(serialID):
+    data = request.json
+    filt = {'serialID':serialID}
+    update_petStatus = {
+        "$set":{
+            "temp": data["temp"],
+            "humid": data["humid"],
+            "lat": data["lat"],
+            "long": data["long"]
+        }
+    }
+    collection_petStatus.update_one(filt,update_petStatus)
+    return {'result': 'Created successfully'}
+
+
+
+@app.route('/delete_data', methods=['DELETE'])
+def delete_data(**kwargs):
+    userID = {"userID": kwargs["userID"]}
+    userData = collection_userData.find(userID)
+    for element in userData:
+        collection_petStatus.delete_one(element["serialID"])
+    # serialID = {"serialID":petStatus[0]["serialID"]}
+    collection_userData.delete_many(userID)
+    return {'result': 'Deleted successfully'}
+
+# @app.route('/userData', methods=['PATCH'])
+# def edit_userdata():
+#     data = request.json    
+#     filt = {'userID': ""}
+#     updated_content = {"$set": {'content1': data["content1"]}}  
+#     collection_userData.update_one(filt, updated_content) 
+#     return {'result': 'Updated successfully'}
+
 @app.route('/test', methods=['POST'])
 def test():
     data = request.json
     collection_test.insert_one(data)
     return {'result': 'Created successfully'}
-
-@app.route('/petStatus', methods=['POST'])
-def petStatus():
-    data = request.json
-    filt = {'serialID': '1'}
-    petStatus = {
-        "serialID": data["serial_ID"],
-        "temp": data["temp"],
-        "humid": data["humid"],
-        "location": data["location"]
-    }
-    collection_petStatus.update_one(filt,petStatus)
-    return {'result': 'Created successfully'}
-
 
 @app.route('/GPS', methods=['GET', 'POST'])
 def checkinfo(**kwargs):
@@ -151,6 +154,8 @@ def checkinfo(**kwargs):
     line_bot_api.reply_message(kwargs['replyToken'], TextSendMessage(text = str(PetInfo) ))
         
 
+
+# * ------------------------------------ line api ---------------------------------- *
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     # get X-Line-Signature header value
@@ -175,15 +180,15 @@ def handle_location_message(event):
         )
     )
 
-@handler.add(FollowEvent)
-def handle_follow(event):
-    userID = event.source.user_id
-    return create_user(userID = userID)
+# @handler.add(FollowEvent)
+# def handle_follow(event):
+#     userID = event.source.user_id
+#     return create_user(userID = userID)
 
 @handler.add(UnfollowEvent)
 def handle_unfollow(event):
     userID = event.source.user_id
-    return delete_user(userID = userID)
+    return delete_data(userID = userID)
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
@@ -191,9 +196,8 @@ def handle_message(event):
     userID = event.source.user_id
     nameCat = event.message.text
     replyToken = event.reply_token
-    
     if text == 'เมนู':
-        return who_u_talk_to(replyToken=replyToken, userID = userID)
+        return line_bot_api.reply_message(replyToken,TextSendMessage(text = 'https://breezy-skunk-90.loca.lt/register/' + event.source.user_id))
     else:
         return checkinfo(replyToken=replyToken,userID=userID,nameCat=nameCat)
         
