@@ -118,6 +118,35 @@ def register():
     collection_petStatus.insert_one(petStatus)
     return 'Created Successfully'
 
+@app.route('/userdata', methods=['GET'])
+def get_userData():
+    data = collection_userData.find()
+    userData = []
+    for element in data:
+        userData.append({
+            "userID": element["userID"],
+            "serialID": element["serialID"],
+            "name":element["name"],
+            "petName": element["petName"],
+            "tel": element["tel"]
+        })
+    return jsonify(userData)
+
+@app.route('/petStatus', methods=['GET'])
+def get_petStatus():
+    data = collection_petStatus.find()
+    petStatus = []
+    for element in data:
+        petStatus.append({
+            "serialID": element["serialID"],
+            "petName": element["petName"],
+            "temp": element["temp"],
+            "humid": element["humid"],
+            "lat": element["lat"],
+            "long": element["long"]
+        })
+    return jsonify(petStatus)
+
 @app.route('/userdata/userID/<userID>', methods=['GET'])
 def get_userdata_by_userID(userID):
     filt = {"userID":userID}
@@ -131,7 +160,7 @@ def get_userdata_by_userID(userID):
             "petName": element["petName"],
             "tel": element["tel"]
         })
-    return {"userData":userData}
+    return jsonify(userData)
 
 @app.route('/userdata/serialID/<serialID>', methods=['GET'])
 def get_userdata_by_serialID(serialID):
@@ -144,7 +173,7 @@ def get_userdata_by_serialID(serialID):
         "petName": data["petName"],
         "tel": data["tel"] 
     }
-    return userData
+    return jsonify(userData)
 
 @app.route('/petStatus/<serialID>', methods=['PUT'])
 def get_petStatus_from_hardware(serialID):
@@ -153,6 +182,7 @@ def get_petStatus_from_hardware(serialID):
     update_petStatus = {
         "$set":{
             "serialID": data["serialID"],
+            "petName": data["petName"],
             "temp": data["temp"],
             "humid": data["humid"],
             "lat": data["lat"],
@@ -244,6 +274,8 @@ def handle_message(event):
         template_message = TemplateSendMessage(
             alt_text='Buttons alt text', template=buttons_template)
         line_bot_api.reply_message(event.reply_token, template_message)
+    # elif text == 'GPS':
+
     else:
         return checkinfo(replyToken=replyToken,userID=userID,nameCat=nameCat)
 
