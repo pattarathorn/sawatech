@@ -146,12 +146,13 @@ def get_userdata_by_serialID(serialID):
     }
     return userData
 
-@app.route('/petStatus/<serialID>', methods=['PATCH'])
+@app.route('/petStatus/<serialID>', methods=['PUT'])
 def get_petStatus_from_hardware(serialID):
     data = request.json
     serialID = {'serialID':serialID}
     update_petStatus = {
         "$set":{
+            "serialID": data["serialID"],
             "temp": data["temp"],
             "humid": data["humid"],
             "lat": data["lat"],
