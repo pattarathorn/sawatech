@@ -96,6 +96,31 @@ def index():
 def register_page(userID):
     return render_template("register_form.html",userID=userID)
 
+@app.route('/edit/<userID>')
+def edit_page(userID,listPet):
+    return render_template("edit_form.html",userID=userID,listPet=listPet)
+
+@app.route('/edit_user', methods=['PUT'])
+def edit():
+    data = request.form
+    userData = {
+        "userID": data["userID"],
+        "serialID": data["serialID"],
+        "name":data["name"],
+        "petName": data["petName"],
+        "tel": data["tel"]
+    }
+    petStatus = {
+        "serialID": data["serialID"],
+        "petName":data["petName"],
+        "temp": '0',
+        "humid": '0',
+        "lat": '0',
+        "long": '0'
+    }
+    collection_userData.update_one(userData)
+    collection_petStatus.update_one(petStatus)
+    return 'Created Successfully'
 @app.route('/create_user', methods=['POST'])
 def register():
     data = request.form
@@ -205,15 +230,12 @@ def delete_data(**kwargs):
 @app.route('/GPS', methods=['GET', 'POST'])
 def checkinfo(**kwargs):
     NamePet = collection_userData.find({"petName":kwargs['nameCat'],"userID":kwargs['userID']})
-    print(NamePet[0]["serialID"])
     SerialID = NamePet[0]["serialID"]
     Status = collection_petStatus.find({"serialID":SerialID})
     PetInfo = Status[0]
-    print(PetInfo)
-    print(type(PetInfo))
-    line_bot_api.reply_message(kwargs['replyToken'], TextSendMessage(text = str(PetInfo) ))
-        
-# --------------- test api ----------------
+    line_bot_api.push_message(kwargs['userID'], LocationSendMessage(title ='cat location' , latitude= PetInfo["lat"],longitude=PetInfo["long"],address="ตำแหน่งของ " + PetInfo["petName"]))
+    line_bot_api.push_message(kwargs['userID'], TextSendMessage(text = 'Name: ' + PetInfo["petName"] + "\n" + 'Temperature: ' + PetInfo["temp"] + "\n" +'humidity: ' + PetInfo["humid"] ))
+    # --------------- test api ----------------
 @app.route('/test', methods=['POST'])
 def test():
     data = request.json
@@ -263,23 +285,40 @@ def handle_message(event):
     userID = event.source.user_id
     nameCat = event.message.text
     replyToken = event.reply_token
-    if text == 'เมนู':
-        buttons_template = ButtonsTemplate(
-            title='Menu', text='เลือกฟังก์ชัน', actions=[
-                URITemplateAction(
-                    label='ลงทะเบียนน้องแมว', uri='https://breezy-skunk-90.loca.lt/register/' + event.source.user_id),
-                URITemplateAction(
-                    label='แก้ไขข้อมูล', uri='https://line.me')
-            ])
-        template_message = TemplateSendMessage(
-            alt_text='Buttons alt text', template=buttons_template)
-        line_bot_api.reply_message(event.reply_token, template_message)
+    listPet = []
+    for name in collection_userData.find({"userID":userID}):        
+        listPet.append(name["petName"])
+    
+    if text == 'ลงทะเบียน':
+        return line_bot_api.reply_message(replyToken, TextSendMessage(text = 'https://f19b4a7276b3.ngrok.io/register/' + userID))
+    if text == 'แก้ไข':
+        return line_bot_api.reply_message(replyToken, TextSendMessage(text = 'https://f19b4a7276b3.ngrok.io/edit/' + userID))
+    #---------------------------------- check ว่าสัตว์ชื่อนี้มีอยู่ในดาต้าเบสหรือยัง ------------------------------------
+    else:
+        NamePet = collection_userData.find({"petName":text,"userID":userID})
+        for x in listPet:
+            if(text == x):
+                return checkinfo(replyToken=replyToken,userID=userID,nameCat=nameCat)
+            else:
+                pass
+        return line_bot_api.reply_message(replyToken, TextSendMessage(text = 'ไม่มีสัตว์เลี้ยงตัวนี้อยู่ในระบบ กรุณา ลงทะเบียนก่อน'))
+        
+#     if text == 'เมนู':
+#        buttons_template = ButtonsTemplate(
+#            title='Menu', text='เลือกฟังก์ชัน', actions=[
+#                URITemplateAction(
+#                    label='ลงทะเบียนน้องแมว', uri='https://breezy-skunk-90.loca.lt/register/' + event.source.user_id),
+#                URITemplateAction(
+#                    label='แก้ไขข้อมูล', uri='https://line.me')
+#            ])
+#        template_message = TemplateSendMessage(
+#            alt_text='Buttons alt text', template=buttons_template)
+#        line_bot_api.reply_message(event.reply_token, template_message)
     # elif text == 'GPS':
 
-    else:
-        return checkinfo(replyToken=replyToken,userID=userID,nameCat=nameCat)
+#    else:
+#        return checkinfo(replyToken=replyToken,userID=userID,nameCat=nameCat)
 
 
 if __name__ == '__main__':
     app.run(port='8000',debug=True)
-
