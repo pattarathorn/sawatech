@@ -241,8 +241,10 @@ def checkinfo(**kwargs):
     SerialID = NamePet[0]["serialID"]
     Status = collection_petStatus.find({"serialID":SerialID})
     PetInfo = Status[0]
+    temp = str(PetInfo["temp"])
+    humid = str(PetInfo["humid"])
     line_bot_api.push_message(kwargs['userID'], LocationSendMessage(title ='cat location' , latitude= PetInfo["lat"],longitude=PetInfo["long"],address="ตำแหน่งของ " + PetInfo["petName"]))
-    line_bot_api.push_message(kwargs['userID'], TextSendMessage(text = 'Name: ' + PetInfo["petName"] + "\n" + 'Temperature: ' + PetInfo["temp"] + "\n" +'humidity: ' + PetInfo["humid"] ))
+    line_bot_api.push_message(kwargs['userID'], TextSendMessage(text = 'Name: ' + PetInfo["petName"] + "\n" + 'Temperature: ' + temp + "\n" +'humidity: ' + humid ))
     # --------------- test api ----------------
 @app.route('/test', methods=['POST'])
 def test():
