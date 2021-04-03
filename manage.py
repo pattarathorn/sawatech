@@ -215,6 +215,14 @@ def get_petStatus_from_hardware(serialID):
         }
     }
     collection_petStatus.update_one(serialID,update_petStatus)
+    temp = collection_petStatus.find_one(serialID)
+    userdata = collection_userData.find_one(serialID)
+    userID = userdata["userID"]
+    petName = userdata["petName"]
+    temp = temp["temp"]
+    if(int(temp) >= 35):
+        line_bot_api.push_message(userID, TextSendMessage(text = petName + "ของคุณมีอุณหภูมิสูงผิดปกติ !!"))
+    
     return {'result': 'Updated Successfully'}
 
 @app.route('/delete_data', methods=['DELETE'])
@@ -227,7 +235,7 @@ def delete_data(**kwargs):
     collection_userData.delete_many(userID)
     return {'result': 'Deleted successfully'}
 
-@app.route('/GPS', methods=['GET', 'POST'])
+@app.route('/information', methods=['GET', 'POST'])
 def checkinfo(**kwargs):
     NamePet = collection_userData.find({"petName":kwargs['nameCat'],"userID":kwargs['userID']})
     SerialID = NamePet[0]["serialID"]
@@ -290,9 +298,9 @@ def handle_message(event):
         listPet.append(name["petName"])
     
     if text == 'ลงทะเบียน':
-        return line_bot_api.reply_message(replyToken, TextSendMessage(text = 'https://f19b4a7276b3.ngrok.io/register/' + userID))
+        return line_bot_api.reply_message(replyToken, TextSendMessage(text = 'http://fd6420d74a8c.ngrok.io/register/' + userID))
     if text == 'แก้ไข':
-        return line_bot_api.reply_message(replyToken, TextSendMessage(text = 'https://f19b4a7276b3.ngrok.io/edit/' + userID))
+        return line_bot_api.reply_message(replyToken, TextSendMessage(text = 'http://fd6420d74a8c.ngrok.io/edit/' + userID))
     #---------------------------------- check ว่าสัตว์ชื่อนี้มีอยู่ในดาต้าเบสหรือยัง ------------------------------------
     else:
         NamePet = collection_userData.find({"petName":text,"userID":userID})
