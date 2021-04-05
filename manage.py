@@ -43,84 +43,14 @@ collection_test = mongo.db.test
 collection_userData = mongo.db.user_data
 collection_petStatus = mongo.db.pet_status
 
-# ----------------- set Hardware --------------------------
-# @app.route('/set_serialID', methods=['POST'])
-# def set_serialID():
-#     data = request.json
-#     userData = {
-#         "userID":"",
-#         "serialID": data["serialID"],
-#         "name":"",
-#         "petName":"",
-#         "tel":""
-#     }
-#     petStatus = {
-#         "serialID": data["serialID"],
-#         "petName":"",
-#         "temp": '0',
-#         "humid": '0',
-#         "lat": '0',
-#         "long": '0'
-#     }
-#     collection_userData.insert_one(userData)
-#     collection_petStatus.insert_one(petStatus)
-#     return 'Setup Success!'
-
-# ------------------ register --------------------
-# @app.route('/create_user', methods=['PATCH'])
-# def register():
-#     data = request.form
-#     serialID = {"serialID":data["serialID"]}
-#     userData = {
-#         "$set:":{
-#             "userID": data["userID"],
-#             "name":data["name"],
-#             "petName": data["petName"],
-#             "tel": data["tel"]
-#         }
-#     }
-#     petStatus = {
-#         "$set":{
-#             "petName":data["petName"],
-#         }
-#     }
-#     collection_userData.update_one(serialID,userData)
-#     collection_petStatus.update_one(serialID,petStatus)
-#     return 'Created Successfully'
-
 @app.route('/')
 def index():
     return 'Sawa Embedded'
 
 @app.route('/register/<userID>')
 def register_page(userID):
-    return render_template("register_form.html",userID=userID)
+    return render_template("register.html",userID=userID)
 
-@app.route('/edit/<userID>')
-def edit_page(userID,listPet):
-    return render_template("edit_form.html",userID=userID,listPet=listPet)
-
-@app.route('/edit_user', methods=['PUT'])
-def edit():
-    data = request.form
-    userData = {
-        "userID": data["userID"],
-        "serialID": data["serialID"],
-        "name":data["name"],
-        "petName": data["petName"],
-        "tel": data["tel"]
-    }
-    petStatus = {
-        "serialID": data["serialID"],
-        "petName":data["petName"],
-        "temp": '0',
-        "humid": '0',
-        "lat": '0',
-        "long": '0'
-    }
-    collection_userData.update_one(userData)
-    collection_petStatus.update_one(petStatus)
-    return 'Created Successfully'
 @app.route('/create_user', methods=['POST'])
 def register():
     data = request.form
@@ -203,15 +133,15 @@ def get_userdata_by_serialID(serialID):
 @app.route('/petStatus/<serialID>', methods=['PUT'])
 def get_petStatus_from_hardware(serialID):
     data = request.json
-    serialID = {'serialID':serialID}
+    serialID = {'serialID':str(serialID)}
     update_petStatus = {
         "$set":{
-            "serialID": data["serialID"],
-            "petName": data["petName"],
-            "temp": data["temp"],
-            "humid": data["humid"],
-            "lat": data["lat"],
-            "long": data["long"]
+            "serialID": str(data["serialID"]),
+            "petName": str(data["petName"]),
+            "temp": str(data["temp"]),
+            "humid": str(data["humid"]),
+            "lat": str(data["lat"]),
+            "long": str(data["long"])
         }
     }
     collection_petStatus.update_one(serialID,update_petStatus)
@@ -220,9 +150,8 @@ def get_petStatus_from_hardware(serialID):
     userID = userdata["userID"]
     petName = userdata["petName"]
     temp = temp["temp"]
-    if(int(temp) >= 35):
+    if(float(temp) >= 30):
         line_bot_api.push_message(userID, TextSendMessage(text = petName + "ของคุณมีอุณหภูมิสูงผิดปกติ !!"))
-    
     return {'result': 'Updated Successfully'}
 
 @app.route('/delete_data', methods=['DELETE'])
@@ -243,14 +172,12 @@ def checkinfo(**kwargs):
     PetInfo = Status[0]
     temp = str(PetInfo["temp"])
     humid = str(PetInfo["humid"])
-    line_bot_api.push_message(kwargs['userID'], LocationSendMessage(title ='cat location' , latitude= PetInfo["lat"],longitude=PetInfo["long"],address="ตำแหน่งของ " + PetInfo["petName"]))
+    if(PetInfo["lat"] == "0"):
+        line_bot_api.push_message(kwargs['userID'], TextSendMessage(text = 'รอสักครู่ กำลังหาน้องแมวให้อยู่น้า'))
+    else:
+        line_bot_api.push_message(kwargs['userID'], LocationSendMessage(title ='cat location' , latitude= PetInfo["lat"],longitude=PetInfo["long"],address="ตำแหน่งของ " + PetInfo["petName"]))
     line_bot_api.push_message(kwargs['userID'], TextSendMessage(text = 'Name: ' + PetInfo["petName"] + "\n" + 'Temperature: ' + temp + "\n" +'humidity: ' + humid ))
     # --------------- test api ----------------
-@app.route('/test', methods=['POST'])
-def test():
-    data = request.json
-    collection_test.insert_one(data)
-    return {'result': 'Created successfully'}
 
 
 # * ------------------------------------ line api ---------------------------------- *
@@ -298,37 +225,58 @@ def handle_message(event):
     listPet = []
     for name in collection_userData.find({"userID":userID}):        
         listPet.append(name["petName"])
-    
     if text == 'ลงทะเบียน':
-        return line_bot_api.reply_message(replyToken, TextSendMessage(text = 'http://fd6420d74a8c.ngrok.io/register/' + userID))
-    if text == 'แก้ไข':
-        return line_bot_api.reply_message(replyToken, TextSendMessage(text = 'http://fd6420d74a8c.ngrok.io/edit/' + userID))
+        return line_bot_api.reply_message(replyToken, TextSendMessage(text = 'ลงทะเบียนได้ที่ลิงก์นี้เลยจ้า ' + 'https://polite-mole-50.loca.lt/register/' + userID))
+    # if text == 'แก้ไข':
+    #     return line_bot_api.reply_message(replyToken, TextSendMessage(text = 'https://cuddly-zebra-7.loca.lt/edit/' + userID))
     #---------------------------------- check ว่าสัตว์ชื่อนี้มีอยู่ในดาต้าเบสหรือยัง ------------------------------------
     else:
         NamePet = collection_userData.find({"petName":text,"userID":userID})
         for x in listPet:
+            
             if(text == x):
                 return checkinfo(replyToken=replyToken,userID=userID,nameCat=nameCat)
             else:
                 pass
-        return line_bot_api.reply_message(replyToken, TextSendMessage(text = 'ไม่มีสัตว์เลี้ยงตัวนี้อยู่ในระบบ กรุณา ลงทะเบียนก่อน'))
-        
-#     if text == 'เมนู':
-#        buttons_template = ButtonsTemplate(
-#            title='Menu', text='เลือกฟังก์ชัน', actions=[
-#                URITemplateAction(
-#                    label='ลงทะเบียนน้องแมว', uri='https://breezy-skunk-90.loca.lt/register/' + event.source.user_id),
-#                URITemplateAction(
-#                    label='แก้ไขข้อมูล', uri='https://line.me')
-#            ])
-#        template_message = TemplateSendMessage(
-#            alt_text='Buttons alt text', template=buttons_template)
-#        line_bot_api.reply_message(event.reply_token, template_message)
-    # elif text == 'GPS':
-
-#    else:
-#        return checkinfo(replyToken=replyToken,userID=userID,nameCat=nameCat)
-
-
+        if(len(listPet)==0):
+            return  line_bot_api.reply_message(
+                        event.reply_token, [
+                            TextSendMessage(
+                                text='ไม่มีสัตว์เลี้ยงตัวนี้อยู่ในระบบ กรุณาลงทะเบียนก่อน https://polite-mole-50.loca.lt/register/' + userID
+                            )
+                        ]
+                    )
+        else:
+            line_bot_api.push_message(userID, TextSendMessage(text=('ลองพิมพ์ชื่อสัตว์เลี้ยงของคุณ')))
+            for x in listPet:
+                line_bot_api.push_message(userID,TextSendMessage(text= x))
 if __name__ == '__main__':
     app.run(port='8000',debug=True)
+
+# ----------------- set Hardware --------------------------
+# @app.route('/set_serialID', methods=['POST'])
+# def set_serialID():
+#     data = request.json
+#     userData = {
+#         "userID":"",
+#         "serialID": data["serialID"],
+#         "name":"",
+#         "petName":"",
+#         "tel":""
+#     }
+#     petStatus = {
+#         "serialID": data["serialID"],
+#         "petName":"",
+#         "temp": '0',
+#         "humid": '0',
+#         "lat": '0',
+#         "long": '0'
+#     }
+#     collection_userData.insert_one(userData)
+#     collection_petStatus.insert_one(petStatus)
+#     return 'Setup Success!'
+
+# <--------------- real register -----------------> 
+# @app.route('/create_user', methods=['POST','PUT'])
+# def create():
+#     data 
